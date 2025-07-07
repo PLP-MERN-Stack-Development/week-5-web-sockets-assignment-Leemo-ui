@@ -71,3 +71,17 @@ io.on('connection', (socket) => {
     console.log('User disconnected:', socket.id);
   });
 });
+// Add to server/index.js
+socket.on('private-message', ({ to, text }) => {
+  const fromUser = users.get(socket.id);
+  if (fromUser) {
+    const toSocket = [...users.entries()].find(([_, user]) => user.username === to)?.[0];
+    if (toSocket) {
+      io.to(toSocket).emit('private-message', {
+        from: fromUser.username,
+        text,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+});

@@ -9,6 +9,8 @@ export default function Chat({ username }) {
   const [users, setUsers] = useState([]);
   const [typingUsers, setTypingUsers] = useState([]);
   const messagesEndRef = useRef(null);
+  const [activeUser, setActiveUser] = useState(null);
+  const [privateMessages, setPrivateMessages] = useState({});
 
   useEffect(() => {
     socket.emit('register', username);
@@ -45,25 +47,42 @@ export default function Chat({ username }) {
       }]);
     });
 
+    socket.on('private-message', ({ from, text, timestamp }) => {
+      setPrivateMessages(prev => ({
+        ...prev,
+        [from]: [...(prev[from] || []), {
+          text,
+          sender: from,
+          timestamp,
+          isPrivate: true
+        }]
+      }));
+    });
+
     return () => {
       socket.off('message');
       socket.off('user-list');
       socket.off('typing');
       socket.off('user-connected');
       socket.off('user-disconnected');
+      socket.off('private-message');
     };
   }, [username]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, privateMessages]);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (message.trim()) {
-      socket.emit('message', { text: message });
-      setMessage('');
-      socket.emit('typing', false);
+      if (activeUser) {
+        handlePrivateMessage(e);
+      } else {
+        socket.emit('message', { text: message });
+        setMessage('');
+        socket.emit('typing', false);
+      }
     }
   };
 
@@ -75,27 +94,68 @@ export default function Chat({ username }) {
     }
   };
 
+  const handlePrivateMessage = (e) => {
+    e.preventDefault();
+    if (message.trim() && activeUser) {
+      socket.emit('private-message', { to: activeUser, text: message });
+      setPrivateMessages(prev => ({
+        ...prev,
+        [activeUser]: [...(prev[activeUser] || []), {
+          text: message,
+          sender: 'You',
+          timestamp: new Date().toISOString(),
+          isPrivate: true
+        }]
+      }));
+      setMessage('');
+      socket.emit('typing', false);
+    }
+  };
+
   return (
     <div className="chat-container">
       <div className="user-list">
         <h3>Online Users ({users.length})</h3>
         <ul>
           {users.map((user, index) => (
-            <li key={index}>{user.username}</li>
+            <li 
+              key={index} 
+              onClick={() => setActiveUser(user.username)}
+              className={activeUser === user.username ? 'active' : ''}
+            >
+              {user.username}
+            </li>
           ))}
         </ul>
       </div>
       
       <div className="chat-messages">
-        {messages.map((msg, index) => (
-          <div key={index} className={`message ${msg.isSystem ? 'system' : ''}`}>
-            {!msg.isSystem && <span className="sender">{msg.sender}: </span>}
-            <span className="text">{msg.text}</span>
-            <span className="timestamp">
-              {new Date(msg.timestamp).toLocaleTimeString()}
-            </span>
+        {activeUser ? (
+          <div className="private-chat">
+            <h4>Private chat with {activeUser}</h4>
+            {(privateMessages[activeUser] || []).map((msg, index) => (
+              <div key={index} className={`message ${msg.isPrivate ? 'private' : ''}`}>
+                <span className="sender">{msg.sender}: </span>
+                <span className="text">{msg.text}</span>
+                <span className="timestamp">
+                  {new Date(msg.timestamp).toLocaleTimeString()}
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
+        ) : (
+          <>
+            {messages.map((msg, index) => (
+              <div key={index} className={`message ${msg.isSystem ? 'system' : ''}`}>
+                {!msg.isSystem && <span className="sender">{msg.sender}: </span>}
+                <span className="text">{msg.text}</span>
+                <span className="timestamp">
+                  {new Date(msg.timestamp).toLocaleTimeString()}
+                </span>
+              </div>
+            ))}
+          </>
+        )}
         <div ref={messagesEndRef} />
         
         {typingUsers.length > 0 && (
@@ -113,7 +173,7 @@ export default function Chat({ username }) {
             setMessage(e.target.value);
             handleTyping();
           }}
-          placeholder="Type a message..."
+          placeholder={`Type a ${activeUser ? 'private' : 'public'} message...`}
         />
         <button type="submit">Send</button>
       </form>
