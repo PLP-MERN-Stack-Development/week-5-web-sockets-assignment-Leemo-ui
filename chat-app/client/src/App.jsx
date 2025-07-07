@@ -13,7 +13,7 @@ function App() {
 
   // Connect to Socket.io server
   useEffect(() => {
-    socketRef.current = io('http://localhost:5173'); // Update with your server URL
+    socketRef.current = io('http://localhost:5175'); // Update with your server URL
 
     socketRef.current.on('connect', () => {
       setIsConnected(true);
