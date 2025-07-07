@@ -27,3 +27,47 @@ io.on('connection', (socket) => {
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+// Add to server/index.js
+const users = new Map();
+
+io.on('connection', (socket) => {
+  console.log('A user connected:', socket.id);
+
+  socket.on('register', (username) => {
+    users.set(socket.id, { username });
+    socket.broadcast.emit('user-connected', username);
+    io.emit('user-list', Array.from(users.values()));
+  });
+
+  socket.on('message', (message) => {
+    const user = users.get(socket.id);
+    if (user) {
+      const messageWithSender = {
+        ...message,
+        sender: user.username,
+        timestamp: new Date().toISOString()
+      };
+      io.emit('message', messageWithSender);
+    }
+  });
+
+  socket.on('typing', (isTyping) => {
+    const user = users.get(socket.id);
+    if (user) {
+      socket.broadcast.emit('typing', {
+        username: user.username,
+        isTyping
+      });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    const user = users.get(socket.id);
+    if (user) {
+      users.delete(socket.id);
+      socket.broadcast.emit('user-disconnected', user.username);
+      io.emit('user-list', Array.from(users.values()));
+    }
+    console.log('User disconnected:', socket.id);
+  });
+});
