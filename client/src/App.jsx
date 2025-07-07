@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
-import chat from './Chat'; // Assuming Chat component is in the same directory
+import Chat from './Chat'; // Make sure this import matches your file name
 
 const socket = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:4000');
 
 function App() {
   const [isConnected, setIsConnected] = useState(false);
+  const [username, setUsername] = useState('');
+  const [joined, setJoined] = useState(false);
 
   useEffect(() => {
+    // Socket connection handlers
     socket.on('connect', () => {
       setIsConnected(true);
     });
@@ -22,28 +25,20 @@ function App() {
     };
   }, []);
 
-  return (
-    <div>
-      <h1>Chat App</h1>
-      <p>Status: {isConnected ? 'Connected' : 'Disconnected'}</p>
-    </div>
-  );
-}
-function App() {
-  const [username, setUsername] = useState('');
-  const [joined, setJoined] = useState(false);
-
   const handleJoin = (e) => {
     e.preventDefault();
     if (username.trim()) {
       setJoined(true);
+      // Register the user with the server
+      socket.emit('register', username.trim());
     }
   };
 
   if (!joined) {
     return (
       <div className="join-container">
-        <h1>Join Chat</h1>
+        <h1>Chat App</h1>
+        <p>Status: {isConnected ? 'Connected to server' : 'Disconnected from server'}</p>
         <form onSubmit={handleJoin}>
           <input
             type="text"
@@ -52,13 +47,13 @@ function App() {
             placeholder="Enter your username"
             required
           />
-          <button type="submit">Join</button>
+          <button type="submit">Join Chat</button>
         </form>
       </div>
     );
   }
 
-  return <Chat username={username} />;
+  return <Chat username={username} socket={socket} />;
 }
 
 export default App;
