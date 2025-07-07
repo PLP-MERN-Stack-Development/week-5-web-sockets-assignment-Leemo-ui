@@ -1,102 +1,35 @@
-import { useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
-
-const socket = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:4000');
+import { useState } from 'react'
+import reactLogo from './assets/react.svg'
+import viteLogo from '/vite.svg'
+import './App.css'
 
 function App() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [username, setUsername] = useState('');
-  const [joined, setJoined] = useState(false);
-  const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([]);
-
-  useEffect(() => {
-    // Socket connection handlers
-    socket.on('connect', () => {
-      setIsConnected(true);
-    });
-
-    socket.on('disconnect', () => {
-      setIsConnected(false);
-    });
-
-    // Listen for incoming messages
-    socket.on('message', (newMessage) => {
-      setMessages((prev) => [...prev, newMessage]);
-    });
-
-    return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('message');
-    };
-  }, []);
-
-  const handleJoin = (e) => {
-    e.preventDefault();
-    if (username.trim()) {
-      setJoined(true);
-      // Register the user with the server
-      socket.emit('register', username.trim());
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (message.trim()) {
-      // Send message to server with username
-      socket.emit('message', {
-        username,
-        text: message,
-        time: new Date().toLocaleTimeString()
-      });
-      setMessage('');
-    }
-  };
-
-  if (!joined) {
-    return (
-      <div className="join-container">
-        <h1>Chat App</h1>
-        <p>Status: {isConnected ? 'Connected to server' : 'Disconnected from server'}</p>
-        <form onSubmit={handleJoin}>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your username"
-            required
-          />
-          <button type="submit">Join Chat</button>
-        </form>
-      </div>
-    );
-  }
+  const [count, setCount] = useState(0)
 
   return (
-    <div className="chat-container">
-      <h1>Real-Time Chat</h1>
-      <p>Status: {isConnected ? 'Connected' : 'Disconnected'}</p>
-      <div className="messages-container">
-        {messages.map((msg, i) => (
-          <div key={i} className="message">
-            <span className="message-username">{msg.username}: </span>
-            <span className="message-text">{msg.text}</span>
-            <span className="message-time">{msg.time}</span>
-          </div>
-        ))}
+    <>
+      <div>
+        <a href="https://vite.dev" target="_blank">
+          <img src={viteLogo} className="logo" alt="Vite logo" />
+        </a>
+        <a href="https://react.dev" target="_blank">
+          <img src={reactLogo} className="logo react" alt="React logo" />
+        </a>
       </div>
-      <form onSubmit={handleSubmit} className="message-form">
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Type your message here"
-        />
-        <button type="submit">Send</button>
-      </form>
-    </div>
-  );
+      <h1>Vite + React</h1>
+      <div className="card">
+        <button onClick={() => setCount((count) => count + 1)}>
+          count is {count}
+        </button>
+        <p>
+          Edit <code>src/App.jsx</code> and save to test HMR
+        </p>
+      </div>
+      <p className="read-the-docs">
+        Click on the Vite and React logos to learn more
+      </p>
+    </>
+  )
 }
 
-export default App;
+export default App
