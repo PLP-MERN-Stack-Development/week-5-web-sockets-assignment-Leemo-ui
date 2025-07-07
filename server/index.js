@@ -85,3 +85,16 @@ socket.on('private-message', ({ to, text }) => {
     }
   }
 });
+// Add to server/index.js
+socket.on('file-upload', ({ file, fileName, fileType }) => {
+  const user = users.get(socket.id);
+  if (user) {
+    io.emit('file-upload', {
+      sender: user.username,
+      file,
+      fileName,
+      fileType,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
